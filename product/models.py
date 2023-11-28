@@ -1,11 +1,19 @@
+import os
 import cv2
+from moviepy.editor import VideoFileClip
+
+from django.conf import settings
 from django.db import models
 from django.utils import timezone
 from django.contrib.auth import get_user_model
+from django.core.files import File
 
 User = get_user_model()
 
-from moviepy.editor import VideoFileClip
+
+class UserChoice(models.TextChoices):
+    AUTHOR = "AUTHOR"
+    STUDENT = "STUDENT"
 
 
 class Course(models.Model):
@@ -15,7 +23,6 @@ class Course(models.Model):
     # fields
     title = models.CharField(max_length=255)
     content = models.TextField()
-    is_permission = models.BooleanField(default=False)
 
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
@@ -28,43 +35,40 @@ class ViewLessonChoice(models.TextChoices):
 
 class Lesson(models.Model):
     # relations
-    course = models.ForeignKey(Course, on_delete=models.CASCADE)
+    course = models.ManyToManyField(Course, related_name='lessons')
 
     # fields
     title = models.CharField(max_length=255)
-    link = models.URLField()
     video = models.FileField(upload_to='lesson/', null=True)
-    view_time = models.IntegerField(default=0)
+    duration = models.IntegerField(default=0, null=True)
 
-    status = models.CharField(max_length=10, choices=ViewLessonChoice.choices, default=ViewLessonChoice.NOT_SEEN)
-
-    last_seen_time = models.DateTimeField(default=timezone.now)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
-    def get_video_duration_seconds(self):
-        cap = cv2.VideoCapture(self.link)
-
-        # Get the frames per second and total frames count
-        fps = cap.get(cv2.CAP_PROP_FPS)
-        frame_count = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
-
-        # Calculate duration (in seconds)
-        duration_seconds = frame_count / fps
-        print("Sec:", duration_seconds)
-
-        self.view_time = duration_seconds
-        return duration_seconds
-
+    # def save(self, *args, **kwargs):
+    #     self.view_time = self.get_video_duration()
+    #     self.link = self.video.url
+    #     return super().save(*args, **kwargs)
 
 
 class ViewLesson(models.Model):
     # relations
-    lesson = models.ForeignKey(Course, on_delete=models.CASCADE)
-    users = models.ManyToManyField(User)
+    lesson = models.ForeignKey(Lesson, on_delete=models.CASCADE, related_name='view_lesson')
+    user = models.ForeignKey(User, on_delete=models.CASCADE, null=True)
 
     # fields
-    video_record = models.IntegerField(default=0)
+    status = models.CharField(
+        max_length=10, choices=ViewLessonChoice.choices, default=ViewLessonChoice.NOT_SEEN
+    )
+
+    seen_duration = models.IntegerField(default=0)
 
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
+
+    def save(self, *args, **kwargs):
+        if self.seen_duration < self.lesson.duration * 0.8:
+            self.status = ViewLessonChoice.NOT_SEEN
+
+        self.status = ViewLessonChoice.SEEN
+        return super().save(*args, **kwargs)

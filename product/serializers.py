@@ -3,10 +3,16 @@ from rest_framework import serializers
 from .models import Course, Lesson, ViewLesson
 
 
-class CoreSerializer(serializers.ModelSerializer):
+class CourseStatisticsSerializer(serializers.ModelSerializer):
+    lesson_count = serializers.IntegerField()
+    total_time_watched = serializers.IntegerField()
+    student_count = serializers.IntegerField()
+    percentage_of_course_purchases = serializers.IntegerField()
+
     class Meta:
         model = Course
-        fields = ('id', 'user', 'title', 'content', 'is_permission', 'created_at')
+        fields = ['id', 'user', 'title', 'created_at', 'lesson_count', 'total_time_watched', 'student_count',
+                  'percentage_of_course_purchases']
 
 
 class ViewLessonSerializer(serializers.ModelSerializer):

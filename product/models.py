@@ -23,6 +23,7 @@ class Course(models.Model):
     # fields
     title = models.CharField(max_length=255)
     content = models.TextField()
+    entries_count = models.IntegerField(default=0)
 
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)

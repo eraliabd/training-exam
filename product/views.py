@@ -39,7 +39,6 @@ class CourseDetailView(RetrieveAPIView):
 
     def get_queryset(self):
         user = self.request.user
-        Course.objects.filter(user=user, pk=self.kwargs['pk']).update(entries_count=F('entries_count')+1)
         course = Course.objects.filter(user=user, pk=self.kwargs['pk'])
         return course
 
@@ -53,10 +52,7 @@ class CourseStatisticsListAPIView(ListAPIView):
             total_time_watched=Sum('lessons__view_lesson__seen_duration'),
             student_count=Count('lessons__view_lesson__user', distinct=True),
             percentage_of_course_purchases=
-            (Sum('entries_count') / User.objects.all().count())
+            (Count('lessons__view_lesson__user') / User.objects.all().count())
         )
 
         return statistics
-
-
-course_statistics = CourseStatisticsListAPIView.as_view()
